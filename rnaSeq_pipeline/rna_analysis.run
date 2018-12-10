@@ -1,0 +1,259 @@
+#!/bin/bash  -e
+
+cd $wkdir
+if [ ! -s $sampleName ];then mkdir $sampleName;fi
+cd $sampleName
+processDay=`date +%Y%m%d`
+oriFile=$input
+if [ ! -s log ];then mkdir log; fi
+
+## Aligning
+if [ $startStep = "fastq" ];then
+	echo -e  "[`date`]\\tStart alignment and sorting..."
+	if [ $method = "star" ];then
+		output=${sampleName}Aligned.sortedByCoord.out.bam
+		if [ ! -s "$output" ];then
+		$star  \
+			--genomeDir $star_index_dir \
+			--readFilesIn  ${read1}  ${read2} \
+			--twopassMode Basic \
+			--outReadsUnmapped None \
+			--chimSegmentMin 12 \
+			--chimJunctionOverhangMin 12  \
+			--alignSJDBoverhangMin 10 \
+			--alignMatesGapMax 200000 \
+			--alignIntronMax 200000  \
+			--chimSegmentReadGapMax parameter 3 \
+			--alignSJstitchMismatchNmax 5 -1 5 5 \
+			--runThreadN  $thread \
+			--outFilterMultimapNmax 2 \
+			--outFilterMismatchNoverLmax 0.04  \
+			--outSAMtype BAM SortedByCoordinate \
+			--outFileNamePrefix $sampleName  \
+			--readFilesCommand zcat  > $PWD/log/${sampleName}_${processDay}_starAlign.log 2>&1  \
+	 	|| (echo -e "ERROR occurred while aligning, please check $PWD/$PWD/log/${sampleName}_${processDay}_starAlign.log\\n";exit -1)
+		else
+		echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+		fi
+		input=${sampleName}Aligned.sortedByCoord.out.bam
+	fi
+
+	if [ $method = "tophat" ];then
+		output="accepted_hits.bam"
+		if [ ! -s "$output" ];then
+		$tophat  \
+			-p $thread  \
+			--fusion-search \
+			-o $sampleName \
+			$tophat_index_dir \
+			$read1 $read2  > $PWD/log/${sampleName}_${processDay}_tophatAlign.log 2>&1 \
+		|| (echo -e "ERROR occurred while aligning, please check $PWD/log/${sampleName}_${processDay}_tophatAlign.log\\n";exit -1)
+		else
+		echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+		fi
+		input="accepted_hits.bam"
+	fi
+	
+	echo -e "[`date`]\\tFinished alignment"
+	startStep="arGrp"
+fi
+allDone fastq
+
+
+
+#adding or replacing reads groups
+if [ $startStep = "arGrp" ];then
+	echo -e [`date`]\\tStart adding read groups...
+	output=`basename $input .bam`.rg.bam 	
+
+	if [ ! -s $output ];then
+	java  -jar $picard AddOrReplaceReadGroups \
+		INPUT="$input" \
+		OUTPUT="$output" \
+		SORT_ORDER=coordinate \
+		RGID="$sampleName" \
+		RGLB="$library" \
+		RGPL="$platform" \
+		RGPU="$machine" \
+		RGSM="$sampleID" \
+		CREATE_INDEX=TRUE  > "$PWD/log/${sampleName}_${processDay}_readgroup.log"  2>&1 \
+	|| ( echo -e "ERROR occurred while adding group, please check $PWD/log/${sampleName}_${processDay}_readgroup.log\\n";exit -1)
+	delFile
+	echo -e [`date`]\\tFinished adding read groups!
+	else 
+	echo -e "\\t >>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+
+	startStep="markDup"
+	input=$output
+fi
+allDone arGrp
+## mark duplication
+if [ $startStep = "markDup" ];then
+	echo -e [`date`]\\tStart marking duplicates...
+	output=`basename $input .bam`.dedup.bam
+
+	if [ ! -s $output ];then
+	java  -jar $picard MarkDuplicates \
+		INPUT=$input \
+		OUTPUT=$output \
+		METRICS_FILE=log/$sampleName.duplicates.metrics \
+		ASSUME_SORTED=TRUE \
+		VALIDATION_STRINGENCY=SILENT \
+		CREATE_INDEX=TRUE  > $PWD/log/${sampleName}_${processDay}_dedup.log 2>&1 \
+	|| ( echo -e "ERROR occurred while marking duplication, please check $PWD/log/${sampleName}_${processDay}_dedup.log\\n";exit -1)
+	delFile 
+	echo -e [`date`]\\tFinished mark duplication
+	else 
+	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+	
+	startStep="splitN"
+	input=$output
+fi
+allDone markDup
+
+
+# split N Cigar reads
+if [ $startStep = "splitN" ];then
+	echo -e [`date`]\\tStart splitNCigarReads...
+	output=`basename $input .bam`.split.bam
+
+	if [ ! -s $output ];then
+	java -jar $gatk -T  SplitNCigarReads \
+		-R $reference \
+		-I $input \
+		-o $output \
+		-rf ReassignOneMappingQuality \
+		-RMQF 255 \
+		-RMQT 60 \
+		--fix_misencoded_quality_scores \
+		-fixMisencodedQuals \
+		-U ALLOW_N_CIGAR_READS  > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
+	|| ( echo -e "ERROR occurred while SplitNCigarReads, please check $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log\\n";exit -1)
+	delFile
+	echo -e [`date`]\\tFinished splitting N Cigar Reads
+	else 
+	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+	startStep="bqsr"
+	input=$output
+fi
+allDone splitN
+
+# recalibration
+if [ $startStep = "bqsr" ];then
+         echo -e [`date`]\\tStart recalibrating base quality...
+         report="log/$sampleName.recal.report"
+	 output=`basename $input .bam`.recal.bam
+	
+	if [ ! -s $report ];then
+	java -jar $gatk -T BaseRecalibrator \
+		-R $reference \
+		-I $input \
+		-knownSites $mill \
+		-knownSites $dbsnp \
+		-o $report \
+		-nct $thread > $PWD/log/$sampleName"_"$processDay"_"bqsr.log 2>&1 \
+		|| ( echo -e "ERROR occurred while BQSR, please check $PWD/log/${sampleName}_${processDay}_bqsr.log\\n";exit -1)
+	else
+		echo -e "\\t>>>>> $report <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+
+	echo -e [`date`]\\tFinished BQSR, start printing the reads...
+	
+	if [ ! -s $output ];then
+	java -jar $gatk -T PrintReads \
+		-R $reference \
+		-I $input \
+		-o  $output  \
+		-BQSR $report \
+		-nct $thread > $PWD/log/${sampleName}_${processDay}_printReads.log 2>&1 \
+		|| ( echo -e "ERROR occurred while printing reads , please check $PWD/log/${sampleName}_${processDay}_printReads.log\\n";exit -1)
+	echo -e [`date`]\\tFinished recalibration bam file
+	delFile
+	else 
+	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+	
+	startStep="varCall"
+	input=$output
+fi
+allDone reAlign
+
+# call variants
+if [ $startStep = "varCall" ];then
+	echo -e "[`date`]\\tStart calling variants with HaplotyperCaller..."
+	output=$sampleName.variants.raw.vcf
+
+	if [ ! -s $output ];then
+	java -jar $gatk -T HaplotypeCaller \
+		-R $reference \
+		-I $input \
+		-dontUseSoftClippedBases \
+		-D $dbsnp \
+		-stand_call_conf 20 \
+		-stand_emit_conf 20 \
+		-o $output \
+		-nct $thread >log/${sampleName}_${processDay}_HaplotyperCaller.log 2>&1 \
+		|| ( echo -e "ERROR occurred while call variants, please check $PWD/log/${sampleName}_${processDay}__HaplotyperCaller.log\\n";exit -1)
+	echo -e "[`date`]\\tVariants calling has been completed, start filtering the vcf files..."
+	else 
+	echo -e "\\t>>>>> $sampleName.variants.raw.vcf <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+	
+	input=$output
+	output=$sampleName.variants.filtered.vcf
+	echo -e "[`date`]\\tFinished calling variants, begin filtering variants with VariantFiltration..."
+
+	if [ ! -s $output ];then
+	java -jar $gatk -T VariantFiltration \
+		-R $reference \
+		-V $input \
+		-window 35 \
+		-cluster 3 \
+		-filterName FS \
+		-filter "FS > 30" \
+		-filterName QD \
+		-filter "QD < 2" \
+		-filterName DP \
+		-filter "DP < 8" \
+		-filterName MQ \
+		-filter "MQ < 60" \
+		-o  $output >log/${sampleName}_${processDay}_variantFilteration.log 2>&1 \
+		 || ( echo -e "ERROR occurred while filtering variants, please check $PWD/log/${sampleName}_${processDay}__variantFilteration.log\\n";exit -1)
+	echo -e "[`date`]\\tVariants filteration has been completed!"
+	else 
+	echo -e "\\t>>>>> $sampleName.variants.filtered.vcf <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+
+	input=$output
+	startStep="anno"
+fi
+allDone varCall
+
+
+# annotating variants
+if [ $startStep = "anno" ];then
+	echo -e "[`date`]\\tStart annotation with annovar..."
+
+	if [ ! -s annotation ];then mkdir annotation;fi
+
+	if [ ! -s annotation/$sampleName.hg19_multianno.txt ];then
+		$table_annovar $input  /database/annotation/annovar/humandb/ \
+			-buildver hg19  \
+			-out annotation/$sampleName \
+			-protocol refGene,genomicSuperDups,1000g2014oct_all,1000g2014oct_afr,1000g2014oct_eas,1000g2014oct_eur,avsnp142,ljb26_all \
+			-operation g,r,f,f,f,f,f,f  \
+			-vcfinput \
+			-remove  2>&1  >log/${sampleName}_${processDay}_annotation.log 2>&1 \
+		|| ( echo -e "ERROR occurred while annotation, please check $PWD/log/${sampleName}_${processDay}_annotation.log\\n";exit -1)
+
+	echo -e "[`date`]\\tVariants annnotation  has been completed!"
+	else 
+	echo -e "\\t>>>>> $sampleName.hg19_multianno.txt <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+fi
+allDone anno
+
+

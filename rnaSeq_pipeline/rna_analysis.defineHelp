@@ -1,0 +1,61 @@
+#!/bin/bash -e
+help='RNA Sequencing Pipeline
+A simple automated script to prepare the require file for variant calling in RNA sequencing
+==============================================================================================
+Sample Information:
+	-n|--sampleName		Name of the Sample			[ REQUIRED ]
+	-1|--read1		Path to the forward read(fq1_1 fq1_2) 	[ REQUIRED If Alignment ]
+	-2|--read2		Path to the reverse read(fq2_1 fq2_2)	[ REQUIRED If Alignment ]
+	-i|--input		Input files				[ REQUIRED If Processing bam ]
+	-w|--wkdir		Working directory			[ default: '$wkdir' ]
+	-k|--platform		Sequencing platform			[ default: '$platform' ]
+	-l|--library		Sequencing Library			[ default: '$library' ]
+	-I|--sampleID		SampleID(unique for each sample)	
+genomics:
+	-W|--species		Species of data ( human|mouse|zebrafish )
+									[ default: '$species' ]
+	-B|--gBuild		Build version for genome		[ default: '$gBuild' ]
+Misc:
+	-M|--method		Method for alignment( star|tophat )	[ default: '$method' ]
+	-t|--thread		Number of threads used in align | realign steps
+									[ default: '$thread' ]
+	-s|--startStep		The first step to process ( fastq|arGrp|markDup|splitN|bqsr|varCall|anno )
+									[ default: '$startStep' ]
+	-e|--endStep		The final step of process ( fastq|arGrp|markDup|splitN|bqsr|varCall|anno)
+									[ default: '$endStep' ]
+	-K|--keepFile		Whether keep the intermediate file	[ default: '$keepFile' ]
+	-c|--check		check the references			[ default: '$check' ]
+	-V|--verbose		Verbose of the logs			[ default: '$verbose' ]
+	-v|--version		Show the version
+	-h|--help		To display this help message
+Notice:
+	If you want to modify the defalut parameters of alignment or other processes,please copy this
+	script and modified directly in the copy
+==============================================================================================
+Usage:    1) '`basename $0`' [options] -1 <Read1> -2 <Read2> -n <Sample Name>
+	  2) '`basename $0`' [options] -n <Sample Name> -s <Star Step> -e <End Step> -i <Bam File>
+	  3) '`basename $0`' -s <Star Step> -e <End Step> -c
+'
+
+if [ -z "$1" ];then 
+	echoHead  "=> Usage:\\n========================================================"
+	echo -e	  "1) rna_analysis.sh [options]\\c"
+	echoRG    '-n' '<Sample Name>' '-t' '16' '-1'  '<Read1>'  '-2'  '<Read2>'
+	echo -e	  "\\n   rna_analysis.sh [options]\\c"
+	echoRG    '-n' '<Sample Name>' '-S' 'mouse' '-t' '16' '-1'  '<Read1>'  '-2'  '<Read2>'
+	echo -e	  "\\n   rna_analysis.sh [options]\\c"
+	echoRG    '-n' '<Sample Name>' '-G' 'hg38' '-t' '16' '-1'  '<Read1>'  '-2'  '<Read2>'
+	echo -e	  "\\n   rna_analysis.sh [options]\\c"
+	echoRG    '-n' '<Sample Name>' '-m' 'tophat' '-t' '16' '-1'  '<Read1>'  '-2'  '<Read2>'
+	
+	echo -e   "\\n2) rna_analysis.sh [options]\\c"
+	echoRG    '-n' '<Sample Name>' '-s' '<Start Step>' '-e' '<End Step>' '-i' '<Bam File>'
+	echo -e   "\\n3) rna_analysis.sh\\c"
+	echoRG    '-s' '<Star Step>' '-e' '<End Step>' '-c'
+	echoHead  "\\n=> Steps:\\n========================================================"
+	echoRG    "|" fastq '|'  arGrp '|' markDup '|' splitN '|' bqsr '|' varCall '|' anno '|'
+	echoHead  "\\n=> Supported Genome:\\n========================================================"
+	echoRG    "|" human '|' mouse  '|' rat  '|'  zebrafish '|' fruitfly '|'
+	echo -e "\\n"
+	exit 0
+fi

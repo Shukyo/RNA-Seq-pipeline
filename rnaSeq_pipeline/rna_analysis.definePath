@@ -1,0 +1,78 @@
+#!/bin/bash -e
+
+wkdir=$PWD
+thread=1
+platform="illumina"
+library="TrueSeq"
+machine="HiSeq2500"
+startStep="fastq"
+endStep="anno"
+species="human"
+gBuild="hg19"
+method="star"
+maxAlign=2
+maxMutationRatio=0.04
+version=2.0
+keepFile="No"
+check="No"
+verbose="No"
+
+
+## progame path
+star="/usr/local/bin/STAR"
+tophat="/usr/bin/tophat"
+samtools="/usr/local/bin/samtools"
+gatk="/software/GATK/GATK_3.0/GenomeAnalysisTK.jar"
+#gatk="/software/GATK/GenomeAnalysisTK_nightly-2017-01-18.jar"
+picard="/software/GATK/picard.jar"
+table_annovar="/software/annovar/table_annovar.pl"
+
+## reference
+## human 
+# hg19
+reference="/database/ref/hg19.fa"
+star_index_dir="/database/star/human/hg19"
+tophat_index_dir="/database/iGenome/Homo_sapiens/UCSC/hg19/Sequence/Bowtie2Index/genome"
+dbsnp="/database/GATK/hg19/db142.hg19.vcf"
+g1000="/database/GATK/hg19/1000G_phase1.indels.hg19.sites.vcf"
+mill="/database/GATK/hg19/Mills_and_1000G_gold_standard.indels.hg19.sites.vcf"
+
+# hg38
+reference_hg38="/database/ref/hg38.fa"
+star_index_dir_hg38=""
+tophat_index_dir_hg38="/database/iGenome/Homo_sapiens/UCSC/hg38/Sequence/Bowtie2Index/genome"
+dbsnp_hg38="/database/GATK/hg38/db142.hg38.vcf"
+g1000_hg38="/database/GATK/hg38/Homo_sapiens_assembly38.known_indels.vcf"
+mill_hg38="/database/GATK/hg38/Mills_and_1000G_gold_standard.indels.hg38.vcf"
+
+## mouse
+#mm10
+reference_mm10="/database/ref/mm10.fa"
+star_index_dir_mm10="/database/star/mouse/mm10"
+tophat_index_dir_mm10="/database/iGenome/Mus_musculus/UCSC/mm10/Sequence/Bowtie2Index/genome"
+dbsnp_mm10="/database/snp/mouse/00-All.vcf"
+
+## zebrafish
+## danRer10
+reference_danRer10="/database/ref/danRer10.fa"
+star_index_dir_danRer10="/database/star/zebrafish/danRer10"
+tophat_index_dir_danRer10="/database/iGenome/Danio_rerio/UCSC/danRer10/Sequence/Bowtie2Index/genome"
+dbsnp_danRer10="/database/snp/zebrafish/00-All.vcf"
+
+## rat_
+## rn6
+reference_rn6="/database/ref/rn6.fa"
+star_index_dir_rn6="/database/star/rat/rn6"
+tophat_index_dir_rn6="/database/iGenome/Rattus_norvegicus/UCSC/rn6/Sequence/Bowtie2Index/genome"
+dbsnp_rn6="/database/snp/rat/00-All.vcf.gz"
+
+## fruitfly_7227
+## dm6
+reference_dm6="/database/ref/dm6.fa"
+star_index_dir_dm6="/database/star/fruitfly/dm6"
+tophat_index_dir_dm6="/database/iGenome/Drosophila_melanogaster/UCSC/dm6/Sequence/Bowtie2Index/genome"
+dbsnp_dm6="/database/snp/fruitfly/00-All.vcf.gz"
+
+
+
+
