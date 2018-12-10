@@ -53,7 +53,7 @@ if [ $startStep = "fastq" ];then
 		fi
 		input="accepted_hits.bam"
 	fi
-	
+
 	echo -e "[`date`]\\tFinished alignment"
 	startStep="arGrp"
 fi
@@ -64,23 +64,35 @@ allDone fastq
 #adding or replacing reads groups
 if [ $startStep = "arGrp" ];then
 	echo -e [`date`]\\tStart adding read groups...
-	output=`basename $input .bam`.rg.bam 	
+	output=`basename $input .bam`.rg.bam
 
 	if [ ! -s $output ];then
-	java  -jar $picard AddOrReplaceReadGroups \
-		INPUT="$input" \
-		OUTPUT="$output" \
-		SORT_ORDER=coordinate \
-		RGID="$sampleName" \
-		RGLB="$library" \
-		RGPL="$platform" \
-		RGPU="$machine" \
-		RGSM="$sampleID" \
-		CREATE_INDEX=TRUE  > "$PWD/log/${sampleName}_${processDay}_readgroup.log"  2>&1 \
-	|| ( echo -e "ERROR occurred while adding group, please check $PWD/log/${sampleName}_${processDay}_readgroup.log\\n";exit -1)
+		$gatk AddOrReplaceReadGroups \
+						 --INPUT "$input" \
+						 --OUTPUT "$sampleName.sorted.dedup.rg.bam" \
+						 --SORT_ORDER coordinate \
+						 RGID="$sampleName" \
+					 	 RGLB="$library" \
+					 	 RGPL="$platform" \
+					 	 RGPU="$machine" \
+					 	 RGSM="$sampleID" \
+						 --CREATE_INDEX  > "$PWD/log/${sampleName}_${processDay}_readgroup.log"  2>&1 \
+						 || ( echo -e "ERROR occurred while adding group, please check $PWD/log/${sampleName}_${processDay}_readgroup.log\\n";exit -1)
+
+	# java  -jar $picard AddOrReplaceReadGroups \
+	# 	INPUT="$input" \
+	# 	OUTPUT="$output" \
+	# 	SORT_ORDER=coordinate \
+	# 	RGID="$sampleName" \
+	# 	RGLB="$library" \
+	# 	RGPL="$platform" \
+	# 	RGPU="$machine" \
+	# 	RGSM="$sampleID" \
+	# 	CREATE_INDEX=TRUE  > "$PWD/log/${sampleName}_${processDay}_readgroup.log"  2>&1 \
+	# || ( echo -e "ERROR occurred while adding group, please check $PWD/log/${sampleName}_${processDay}_readgroup.log\\n";exit -1)
 	delFile
 	echo -e [`date`]\\tFinished adding read groups!
-	else 
+	else
 	echo -e "\\t >>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
 
@@ -88,26 +100,36 @@ if [ $startStep = "arGrp" ];then
 	input=$output
 fi
 allDone arGrp
+
+
 ## mark duplication
 if [ $startStep = "markDup" ];then
 	echo -e [`date`]\\tStart marking duplicates...
 	output=`basename $input .bam`.dedup.bam
 
 	if [ ! -s $output ];then
-	java  -jar $picard MarkDuplicates \
-		INPUT=$input \
-		OUTPUT=$output \
-		METRICS_FILE=log/$sampleName.duplicates.metrics \
-		ASSUME_SORTED=TRUE \
-		VALIDATION_STRINGENCY=SILENT \
-		CREATE_INDEX=TRUE  > $PWD/log/${sampleName}_${processDay}_dedup.log 2>&1 \
-	|| ( echo -e "ERROR occurred while marking duplication, please check $PWD/log/${sampleName}_${processDay}_dedup.log\\n";exit -1)
-	delFile 
+		$gatk MarkDuplicates \
+		  --INPUT $input \
+			--OUTPUT $output \
+			--METRICS_FILE $sampleName.duplicates \
+			--CREATE_INDEX > $PWD/log/${sampleName}_${processDay}_dedup.log 2>&1 \
+			|| ( echo -e "ERROR occurred while marking duplication, please check $PWD/log/${sampleName}_${processDay}_dedup.log\\n";exit -1)
+
+	# java  -jar $picard MarkDuplicates \
+	# 	INPUT=$input \
+	# 	OUTPUT=$output \
+	# 	METRICS_FILE=log/$sampleName.duplicates.metrics \
+	# 	ASSUME_SORTED=TRUE \
+	# 	VALIDATION_STRINGENCY=SILENT \
+	# 	CREATE_INDEX=TRUE  > $PWD/log/${sampleName}_${processDay}_dedup.log 2>&1 \
+	# || ( echo -e "ERROR occurred while marking duplication, please check $PWD/log/${sampleName}_${processDay}_dedup.log\\n";exit -1)
+
+	delFile
 	echo -e [`date`]\\tFinished mark duplication
-	else 
+	else
 	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
-	
+
 	startStep="splitN"
 	input=$output
 fi
@@ -120,66 +142,90 @@ if [ $startStep = "splitN" ];then
 	output=`basename $input .bam`.split.bam
 
 	if [ ! -s $output ];then
-	java -jar $gatk -T  SplitNCigarReads \
-		-R $reference \
-		-I $input \
-		-o $output \
-		-rf ReassignOneMappingQuality \
-		-RMQF 255 \
-		-RMQT 60 \
-		--fix_misencoded_quality_scores \
-		-fixMisencodedQuals \
-		-U ALLOW_N_CIGAR_READS  > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
-	|| ( echo -e "ERROR occurred while SplitNCigarReads, please check $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log\\n";exit -1)
+		$gatk SplitNCigarReads \
+		      -R $reference \
+		      -I $input \
+		      -O $ouput  > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
+				|| ( echo -e "ERROR occurred while SplitNCigarReads, please check $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log\\n";exit -1)
+
+  #
+	# java -jar $gatk -T  SplitNCigarReads \
+	# 	-R $reference \
+	# 	-I $input \
+	# 	-o $output \
+	# 	-rf ReassignOneMappingQuality \
+	# 	-RMQF 255 \
+	# 	-RMQT 60 \
+	# 	--fix_misencoded_quality_scores \
+	# 	-fixMisencodedQuals \
+	# 	-U ALLOW_N_CIGAR_READS  > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
+	# || ( echo -e "ERROR occurred while SplitNCigarReads, please check $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log\\n";exit -1)
+
 	delFile
 	echo -e [`date`]\\tFinished splitting N Cigar Reads
-	else 
+	else
 	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
-	startStep="bqsr"
+	startStep="recal"
 	input=$output
 fi
 allDone splitN
 
 # recalibration
-if [ $startStep = "bqsr" ];then
+if [ $startStep = "recal" ];then
          echo -e [`date`]\\tStart recalibrating base quality...
-         report="log/$sampleName.recal.report"
-	 output=`basename $input .bam`.recal.bam
-	
+         report="$sampleName.recal_data.table"
+	  	 	 output=`basename $input .bam`.recal.bam
+
 	if [ ! -s $report ];then
-	java -jar $gatk -T BaseRecalibrator \
-		-R $reference \
-		-I $input \
-		-knownSites $mill \
-		-knownSites $dbsnp \
-		-o $report \
-		-nct $thread > $PWD/log/$sampleName"_"$processDay"_"bqsr.log 2>&1 \
-		|| ( echo -e "ERROR occurred while BQSR, please check $PWD/log/${sampleName}_${processDay}_bqsr.log\\n";exit -1)
+		$gatk BaseRecalibrator \
+			--input $input \
+			--reference $reference \
+			--known-sites $mill \
+			--known-sites $g1000 \
+			--known-sites $dbsnp \
+			--output  $report > $PWD/log/${sampleName}_${processDay}_recal.log 2>&1 \
+			|| ( echo -e "ERROR occurred while recalibrate , please check $PWD/log/${sampleName}_${processDay}_recal.log\\n";exit -1)
+
+	# java -jar $gatk -T BaseRecalibrator \
+	# 	-R $reference \
+	# 	-I $input \
+	# 	-knownSites $mill \
+	# 	-knownSites $dbsnp \
+	# 	-o $report \
+	# 	-nct $thread > $PWD/log/$sampleName"_"$processDay"_"recal.log 2>&1 \
+	# 	|| ( echo -e "ERROR occurred while RECAL, please check $PWD/log/${sampleName}_${processDay}_bqsr.log\\n";exit -1)
 	else
 		echo -e "\\t>>>>> $report <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
 
 	echo -e [`date`]\\tFinished BQSR, start printing the reads...
-	
+
 	if [ ! -s $output ];then
-	java -jar $gatk -T PrintReads \
-		-R $reference \
-		-I $input \
-		-o  $output  \
-		-BQSR $report \
-		-nct $thread > $PWD/log/${sampleName}_${processDay}_printReads.log 2>&1 \
-		|| ( echo -e "ERROR occurred while printing reads , please check $PWD/log/${sampleName}_${processDay}_printReads.log\\n";exit -1)
+		$gatk ApplyBQSR \
+			 --reference $reference \
+			 --input $input \
+			 --bqsr-recal-file $report  \
+			 --output $output > $PWD/log/${sampleName}_${processDay}_applybqsr.log 2>&1 \
+			 || ( echo -e "ERROR occurred while applying BQSR , please check $PWD/log/${sampleName}_${processDay}_applybqsr.log\\n";exit -1)
+
+	# java -jar $gatk -T PrintReads \
+	# 	-R $reference \
+	# 	-I $input \
+	# 	-o  $output  \
+	# 	-BQSR $report \
+	# 	-nct $thread > $PWD/log/${sampleName}_${processDay}_printReads.log 2>&1 \
+	# 	|| ( echo -e "ERROR occurred while printing reads , please check $PWD/log/${sampleName}_${processDay}_printReads.log\\n";exit -1)
 	echo -e [`date`]\\tFinished recalibration bam file
 	delFile
-	else 
+	else
 	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
-	
+
 	startStep="varCall"
 	input=$output
 fi
-allDone reAlign
+allDone reCal
 
 # call variants
 if [ $startStep = "varCall" ];then
@@ -198,10 +244,10 @@ if [ $startStep = "varCall" ];then
 		-nct $thread >log/${sampleName}_${processDay}_HaplotyperCaller.log 2>&1 \
 		|| ( echo -e "ERROR occurred while call variants, please check $PWD/log/${sampleName}_${processDay}__HaplotyperCaller.log\\n";exit -1)
 	echo -e "[`date`]\\tVariants calling has been completed, start filtering the vcf files..."
-	else 
+	else
 	echo -e "\\t>>>>> $sampleName.variants.raw.vcf <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
-	
+
 	input=$output
 	output=$sampleName.variants.filtered.vcf
 	echo -e "[`date`]\\tFinished calling variants, begin filtering variants with VariantFiltration..."
@@ -223,7 +269,7 @@ if [ $startStep = "varCall" ];then
 		-o  $output >log/${sampleName}_${processDay}_variantFilteration.log 2>&1 \
 		 || ( echo -e "ERROR occurred while filtering variants, please check $PWD/log/${sampleName}_${processDay}__variantFilteration.log\\n";exit -1)
 	echo -e "[`date`]\\tVariants filteration has been completed!"
-	else 
+	else
 	echo -e "\\t>>>>> $sampleName.variants.filtered.vcf <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
 
@@ -250,10 +296,8 @@ if [ $startStep = "anno" ];then
 		|| ( echo -e "ERROR occurred while annotation, please check $PWD/log/${sampleName}_${processDay}_annotation.log\\n";exit -1)
 
 	echo -e "[`date`]\\tVariants annnotation  has been completed!"
-	else 
+	else
 	echo -e "\\t>>>>> $sampleName.hg19_multianno.txt <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
 fi
 allDone anno
-
-

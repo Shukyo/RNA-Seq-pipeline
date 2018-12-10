@@ -19,16 +19,19 @@ verbose="No"
 
 
 ## progame path
-star="/usr/local/bin/STAR"
-tophat="/usr/bin/tophat"
-samtools="/usr/local/bin/samtools"
-gatk="/software/GATK/GATK_3.0/GenomeAnalysisTK.jar"
+star=`which STAR`
+tophat=`which tophat`
+samtools=`samtools`
+gatk=`which gatk`
+gatkjar="/software/GATK/GATK_3.0/GenomeAnalysisTK.jar"
 #gatk="/software/GATK/GenomeAnalysisTK_nightly-2017-01-18.jar"
 picard="/software/GATK/picard.jar"
+#_annotation
 table_annovar="/software/annovar/table_annovar.pl"
 
+
 ## reference
-## human 
+## human
 # hg19
 reference="/database/ref/hg19.fa"
 star_index_dir="/database/star/human/hg19"
@@ -72,7 +75,3 @@ reference_dm6="/database/ref/dm6.fa"
 star_index_dir_dm6="/database/star/fruitfly/dm6"
 tophat_index_dir_dm6="/database/iGenome/Drosophila_melanogaster/UCSC/dm6/Sequence/Bowtie2Index/genome"
 dbsnp_dm6="/database/snp/fruitfly/00-All.vcf.gz"
-
-
-
-

@@ -6,9 +6,9 @@ if [ ! -z "$wrongpara" ];then error="$error \033[1;31m$wrongpara: \033[0mNull/wr
 if [ "$error" ]&&[ "check" = "No" ];then echo -e $error; exit -1;fi
 
 # obtain the included steps
-if [ "$species" = "human" ];then 
-	allSteps=(fastq arGrp markDup splitN bqsr varCall anno)
-else 
+if [ "$species" = "human" ];then
+	allSteps=(fastq arGrp markDup splitN recal varCall anno)
+else
 	allSteps=(fastq arGrp markDup splitN varCall anno)
 fi
 checkStep
@@ -25,12 +25,12 @@ checkFile ${refs[@]}
 
 
 #check the additional parameters
-if [ $# -ge 2 ]&&[ "$startStep" = "fastq" ];then read1=$1 ;read2=$2 ;fi 
+if [ $# -ge 2 ]&&[ "$startStep" = "fastq" ];then read1=$1 ;read2=$2 ;fi
 if [ $# -ge 1 ]&&[ "$startStep" != "fastq" ];then input=$1;fi
 
 # check sample Name and input files
 if [ $verbose = "Yes" ];then echo -e "\033[1;33mPARAMETERS INPUT CHECKING...\033[0m";fi
-if [ $startStep = "fastq" ];then  
+if [ $startStep = "fastq" ];then
 	if [[ $read1 == *,* ]]&&[[ $read1 != *,*,* ]]&&[[ $read2 == *,* ]]&&[[ $read2 != *,*,* ]];then
 		 read1=${read1//,/ }
 		 read2=${read2//,/ }
@@ -40,7 +40,7 @@ if [ $startStep = "fastq" ];then
 		 error=$error"Fastq2 must matched with fastq1\\n";break 2;fi
 	fi;fi
 	inputFiles="$read1 $read2"
-	checkPara  "sampleName read1 read2" 
+	checkPara  "sampleName read1 read2"
 else
 	inputFiles="$input"
 	checkPara "sampleName input"
@@ -48,7 +48,7 @@ fi
 if [ $verbose = "Yes" ];then echo -e "\033[1;33mINPUT FILES CHECKING...\033[0m";fi
 checkFile $inputFiles
 if [ $verbose = "Yes" ];then echo -e "\033[1;33mOthers\\n\033[34m-------------------------------------------\033[0m";fi
-if [ "$checkError" ]||[ "$error" ]||[ "$errorItems" ];then 
+if [ "$checkError" ]||[ "$error" ]||[ "$errorItems" ];then
 	if [ "$error" ];then echo -e "\033[1;31m$error\033[0m";fi
 	if [ "$verbose" = "No" ];then
 		echo -e "\033[1;31m$errorItems\033[0m should be checked via -V option before run!"
