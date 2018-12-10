@@ -21,7 +21,7 @@ verbose="No"
 ## progame path
 star=`which STAR`
 tophat=`which tophat`
-samtools=`samtools`
+samtools=`which samtools`
 gatk=`which gatk`
 gatkjar="/software/GATK/GATK_3.0/GenomeAnalysisTK.jar"
 #gatk="/software/GATK/GenomeAnalysisTK_nightly-2017-01-18.jar"
