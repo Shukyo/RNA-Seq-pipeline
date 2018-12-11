@@ -145,7 +145,7 @@ if [ $startStep = "splitN" ];then
 		$gatk SplitNCigarReads \
 		      -R $reference \
 		      -I $input \
-		      -O $ouput  > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
+		      -O $output  > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
 				|| ( echo -e "ERROR occurred while SplitNCigarReads, please check $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log\\n";exit -1)
 
   #
