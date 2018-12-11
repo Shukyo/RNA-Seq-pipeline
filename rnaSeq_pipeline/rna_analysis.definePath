@@ -16,7 +16,8 @@ version=2.0
 keepFile="No"
 check="No"
 verbose="No"
-
+#tmpDir="/tmp"
+tmpDir="/work/shuy/.tmpDir"
 
 ## progame path
 star=`which STAR`
