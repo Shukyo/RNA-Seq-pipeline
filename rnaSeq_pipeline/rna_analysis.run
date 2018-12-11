@@ -69,13 +69,13 @@ if [ $startStep = "arGrp" ];then
 	if [ ! -s $output ];then
 		$gatk AddOrReplaceReadGroups \
 						 --INPUT "$input" \
-						 --OUTPUT "$sampleName.sorted.dedup.rg.bam" \
+						 --OUTPUT $output \
 						 --SORT_ORDER coordinate \
-						 RGID="$sampleName" \
-					 	 RGLB="$library" \
-					 	 RGPL="$platform" \
-					 	 RGPU="$machine" \
-					 	 RGSM="$sampleID" \
+						 --RGID "$sampleName" \
+					 	 --RGLB "$library" \
+					 	 --RGPL "$platform" \
+					 	 --RGPU "$machine" \
+					 	 --RGSM "$sampleID" \
 						 --CREATE_INDEX  > "$PWD/log/${sampleName}_${processDay}_readgroup.log"  2>&1 \
 						 || ( echo -e "ERROR occurred while adding group, please check $PWD/log/${sampleName}_${processDay}_readgroup.log\\n";exit -1)
 
