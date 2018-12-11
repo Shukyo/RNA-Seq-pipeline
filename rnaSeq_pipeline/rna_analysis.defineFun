@@ -29,12 +29,20 @@ function echoRG(){
 }
 function defineRef(){
 	fastq_ref=($star_index_dir ${tophat_index_dir}.fa $star $tophat)
-	sortBam_ref=($gatk $samtools)
-	markDup_ref=($gatk $samtools)
-	arGrp_ref=( $gatk )
+	arGrp_ref=($gatk)
+	markDup_ref=($gatk)
 	splitN_ref=($gatk $reference)
-	recal_ref=($gatk $reference $g1000 $mill $dbsnp)
-	varCall_ref=($gatk $reference $dbsnp)
+	if [ $species == "human" ];then
+	 	reCal_ref=($gatk $reference $g1000 $mill $dbsnp)
+		varRecal_ref=($gatk $reference $hapmap $omni $g1000hc $dbsnp)
+  else
+		reCal_ref=($gatk $reference $dbsnp)
+		varRecal_ref=($gatk $reference $dbsnp)
+	fi
+	gVcf_ref=($gatk $reference)
+	jCall_ref=($gatk $reference)
+	varFilt_ref=($gatk $reference)
+	anno_ref=($table_annovar $annovar_database)
 }
 
 function checkStep(){

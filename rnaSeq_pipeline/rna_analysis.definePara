@@ -8,7 +8,7 @@ do
 	if [[ $i != -* ]]&&[[ $tag == --* ]]&&[ $tag1 -eq "0" ];then tem="$tem"="$i";tag1="1";fi
 done
 tem=($tem)
-temp=`getopt -qao  :n::1::2::i::w::k::l::I::M::t::s::e::S::G::KcVvh  --long  :sampleName::,read1::,read2::,input::,wkdir::,platform::,library::,sampleID::,method::,thread::,starStep::,endStep::,species::,gBuild::,keepFile,check,verbose,version,help -- "${tem[@]}" `
+temp=`getopt -qao  :n::1::2::i::w::k::l::I::M::t::s::e::S::G::KcVvh  --long  :sampleName::,read1::,read2::,input::,wkdir::,platform::,library::,sampleID::,method::,thread::,starStep::,endStep::,tmpDir::,species::,gBuild::,keepFile,check,verbose,version,help -- "${tem[@]}" `
 eval set -- "$temp"
 while true;do case "$1" in
 	-n|--sampleName)        case $2 in "")  wrongpara="$wrongpara $1" && shift 2;; *)sampleName=$2 && shift 2;;esac;;
@@ -19,11 +19,12 @@ while true;do case "$1" in
 	-k|--platform)          case $2 in "")  wrongpara="$wrongpara $1" && shift 2;; *)platform=$2 && shift 2;;esac;;
 	-l|--library)           case $2 in "")  wrongpara="$wrongpara $1" && shift 2;; *)library=$2 && shift 2;;esac;;
 	-I|--sampleID)          case $2 in "")  wrongpara="$wrongpara $1" && shift 2;; *)id=$2 && shift 2;;esac;;
+	-T|--tmpDir)						case $2 in "")  wrongpara="$wrongpara $1" && shift 2;; *)tmpDir=$2 && shift 2;;esac;;
 	-M|--method)            case $2 in star|tophat) method=$2 && shift 2;; ""|*) wrongpara="$wrongpara $1" && shift 2;;esac;;
 	-t|--thread)            case $2 in [1-6][0-9]|[1-9])thread=$2 && shift 2;; ""|*) wrongpara="$wrongpara $1" && shift 2;; esac;;
-	-s|--startStep)         case $2 in fastq|arGrp|markDup|splitN|recal|varCall|anno)startStep=$2 && shift 2;; \
+	-s|--startStep)         case $2 in fastq|arGrp|markDup|splitN|reCal|gVcf|jCall|varFilt|varRecal|anno)startStep=$2 && shift 2;; \
 				""|*)  wrongpara="$wrongpara $1" && shift 2;;esac;;
-	-e|--endStep)           case $2 in fastq|arGrp|markDup|splitN|recal|varCall|anno)endStep=$2 && shift 2;; \
+	-e|--endStep)           case $2 in fastq|arGrp|markDup|splitN|reCal|gVcf|jCall|varFilt|varRecal|anno)endStep=$2 && shift 2;; \
 				""|*)wrongpara="$wrongpara $1" && shift 2;;esac;;
 	-S|--species)           case $2 in human|mouse|rat|fruitfly|zebrafish)species=$2 && shift 2;; \
 				""|*)wrongpara="$wrongpara $1" && shift 2;;esac;;

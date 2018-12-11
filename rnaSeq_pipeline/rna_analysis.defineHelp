@@ -19,9 +19,9 @@ Misc:
 	-M|--method		Method for alignment( star|tophat )	[ default: '$method' ]
 	-t|--thread		Number of threads used in align | realign steps
 									[ default: '$thread' ]
-	-s|--startStep		The first step to process ( fastq|arGrp|markDup|splitN|recal|varCall|anno )
+	-s|--startStep		The first step to process ( fastq|arGrp|markDup|splitN|reCal|gVcf, jCall|varFilt|varRecal|anno )
 									[ default: '$startStep' ]
-	-e|--endStep		The final step of process ( fastq|arGrp|markDup|splitN|recal|varCall|anno)
+	-e|--endStep		The final step of process ( fastq|arGrp|markDup|splitN|reCal|gVcf, jCall|varFilt|varRecal|anno)
 									[ default: '$endStep' ]
 	-K|--keepFile		Whether keep the intermediate file	[ default: '$keepFile' ]
 	-c|--check		check the references			[ default: '$check' ]
@@ -53,9 +53,11 @@ if [ -z "$1" ];then
 	echo -e   "\\n3) rna_analysis.sh\\c"
 	echoRG    '-s' '<Star Step>' '-e' '<End Step>' '-c'
 	echoHead  "\\n=> Steps:\\n========================================================"
-	echoRG    "|" fastq '|'  arGrp '|' markDup '|' splitN '|' recal '|' varCall '|' anno '|'
+	echoRG    "|" fastq '|'  arGrp '|' markDup '|' splitN '|' reCal '|' gVcf '|' , '|' jCall '|' varFilt '|' varRecal '|' anno '|'
+	echoRG    "Steps could from fastq to gVcf OR jCall to anno[progamme would exit after gVcf]"
 	echoHead  "\\n=> Supported Genome:\\n========================================================"
 	echoRG    "|" human '|' mouse  '|' rat  '|'  zebrafish '|' fruitfly '|'
+
 	echo -e "\\n"
 	exit 0
 fi

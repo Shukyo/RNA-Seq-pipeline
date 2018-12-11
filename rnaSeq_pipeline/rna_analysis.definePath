@@ -29,6 +29,7 @@ gatkjar="/software/GATK/GATK_3.0/GenomeAnalysisTK.jar"
 picard="/software/GATK/picard.jar"
 #_annotation
 table_annovar="/software/annovar/table_annovar.pl"
+annovar_database="/database/annotation/annovar/humandb/"
 
 
 ## reference
@@ -41,6 +42,10 @@ dbsnp="/database/GATK/hg19/db142.hg19.vcf"
 g1000="/database/GATK/hg19/1000G_phase1.indels.hg19.sites.vcf"
 mill="/database/GATK/hg19/Mills_and_1000G_gold_standard.indels.hg19.sites.vcf"
 
+hapmap="/database/GATK/hg19/hapmap_3.3.hg19.sites.vcf"
+omni="/database/GATK/hg19/1000G_omni2.5.hg19.sites.vcf"
+g1000hc="/database/GATK/hg19/1000G_phase1.snps.high_confidence.hg19.sites.vcf"
+
 # hg38
 reference_hg38="/database/ref/hg38.fa"
 star_index_dir_hg38=""
@@ -48,6 +53,10 @@ tophat_index_dir_hg38="/database/iGenome/Homo_sapiens/UCSC/hg38/Sequence/Bowtie2
 dbsnp_hg38="/database/GATK/hg38/db142.hg38.vcf"
 g1000_hg38="/database/GATK/hg38/Homo_sapiens_assembly38.known_indels.vcf"
 mill_hg38="/database/GATK/hg38/Mills_and_1000G_gold_standard.indels.hg38.vcf"
+
+hapmap_hg38="/database/GATK/hg38/hapmap_3.3.hg19.sites.vcf.gz"
+omni_hg38="/database/GATK/hg38/1000G_omni2.5.hg19.sites.vcf.gz"
+g1000hc_hg38="/database/GATK/hg38/1000G_phase1.snps.high_confidence.hg19.sites.vcf.gz"
 
 ## mouse
 #mm10

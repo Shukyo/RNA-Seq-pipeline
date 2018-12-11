@@ -7,6 +7,10 @@ processDay=`date +%Y%m%d`
 oriFile=$input
 if [ ! -s log ];then mkdir log; fi
 
+
+
+
+#################### Section I #########################
 ## Aligning
 if [ $startStep = "fastq" ];then
 	echo -e  "[`date`]\\tStart alignment and sorting..."
@@ -70,6 +74,7 @@ if [ $startStep = "arGrp" ];then
 		$gatk AddOrReplaceReadGroups \
 						 --INPUT "$input" \
 						 --OUTPUT $output \
+						 --TMP_DIR "$tmpDir" \
 						 --SORT_ORDER coordinate \
 						 --RGID "$sampleName" \
 					 	 --RGLB "$library" \
@@ -79,17 +84,6 @@ if [ $startStep = "arGrp" ];then
 						 --CREATE_INDEX  > "$PWD/log/${sampleName}_${processDay}_readgroup.log"  2>&1 \
 						 || ( echo -e "ERROR occurred while adding group, please check $PWD/log/${sampleName}_${processDay}_readgroup.log\\n";exit -1)
 
-	# java  -jar $picard AddOrReplaceReadGroups \
-	# 	INPUT="$input" \
-	# 	OUTPUT="$output" \
-	# 	SORT_ORDER=coordinate \
-	# 	RGID="$sampleName" \
-	# 	RGLB="$library" \
-	# 	RGPL="$platform" \
-	# 	RGPU="$machine" \
-	# 	RGSM="$sampleID" \
-	# 	CREATE_INDEX=TRUE  > "$PWD/log/${sampleName}_${processDay}_readgroup.log"  2>&1 \
-	# || ( echo -e "ERROR occurred while adding group, please check $PWD/log/${sampleName}_${processDay}_readgroup.log\\n";exit -1)
 	delFile
 	echo -e [`date`]\\tFinished adding read groups!
 	else
@@ -109,20 +103,12 @@ if [ $startStep = "markDup" ];then
 
 	if [ ! -s $output ];then
 		$gatk MarkDuplicates \
-		  --INPUT $input \
-			--OUTPUT $output \
+		  --INPUT "$input" \
+			--OUTPUT "$output" \
+			--TMP_DIR "$tmpDir" \
 			--METRICS_FILE $sampleName.duplicates \
 			--CREATE_INDEX > $PWD/log/${sampleName}_${processDay}_dedup.log 2>&1 \
 			|| ( echo -e "ERROR occurred while marking duplication, please check $PWD/log/${sampleName}_${processDay}_dedup.log\\n";exit -1)
-
-	# java  -jar $picard MarkDuplicates \
-	# 	INPUT=$input \
-	# 	OUTPUT=$output \
-	# 	METRICS_FILE=log/$sampleName.duplicates.metrics \
-	# 	ASSUME_SORTED=TRUE \
-	# 	VALIDATION_STRINGENCY=SILENT \
-	# 	CREATE_INDEX=TRUE  > $PWD/log/${sampleName}_${processDay}_dedup.log 2>&1 \
-	# || ( echo -e "ERROR occurred while marking duplication, please check $PWD/log/${sampleName}_${processDay}_dedup.log\\n";exit -1)
 
 	delFile
 	echo -e [`date`]\\tFinished mark duplication
@@ -144,58 +130,52 @@ if [ $startStep = "splitN" ];then
 	if [ ! -s $output ];then
 		$gatk SplitNCigarReads \
 		      -R $reference \
-		      -I $input \
-		      -O $output  \
-					--TMP_DIR $temDir > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
+		      -I "$input" \
+		      -O "$output"  \
+					--tmp-dir $tmpDir > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
 				|| ( echo -e "ERROR occurred while SplitNCigarReads, please check $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log\\n";exit -1)
-
-  #
-	# java -jar $gatk -T  SplitNCigarReads \
-	# 	-R $reference \
-	# 	-I $input \
-	# 	-o $output \
-	# 	-rf ReassignOneMappingQuality \
-	# 	-RMQF 255 \
-	# 	-RMQT 60 \
-	# 	--fix_misencoded_quality_scores \
-	# 	-fixMisencodedQuals \
-	# 	-U ALLOW_N_CIGAR_READS  > $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log 2>&1 \
-	# || ( echo -e "ERROR occurred while SplitNCigarReads, please check $PWD/log/${sampleName}_${processDay}_splitNCigarReads.log\\n";exit -1)
 
 	delFile
 	echo -e [`date`]\\tFinished splitting N Cigar Reads
 	else
 	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
-	startStep="recal"
+	startStep="reCal"
 	input=$output
 fi
 allDone splitN
 
 # recalibration
-if [ $startStep = "recal" ];then
+
+
+
+	if [ $startStep = "reCal" ];then
          echo -e [`date`]\\tStart recalibrating base quality...
          report="$sampleName.recal_data.table"
 	  	 	 output=`basename $input .bam`.recal.bam
 
 	if [ ! -s $report ];then
-		$gatk BaseRecalibrator \
-			--input $input \
-			--reference $reference \
-			--known-sites $mill \
-			--known-sites $g1000 \
-			--known-sites $dbsnp \
-			--output  $report > $PWD/log/${sampleName}_${processDay}_recal.log 2>&1 \
-			|| ( echo -e "ERROR occurred while recalibrate , please check $PWD/log/${sampleName}_${processDay}_recal.log\\n";exit -1)
 
-	# java -jar $gatk -T BaseRecalibrator \
-	# 	-R $reference \
-	# 	-I $input \
-	# 	-knownSites $mill \
-	# 	-knownSites $dbsnp \
-	# 	-o $report \
-	# 	-nct $thread > $PWD/log/$sampleName"_"$processDay"_"recal.log 2>&1 \
-	# 	|| ( echo -e "ERROR occurred while RECAL, please check $PWD/log/${sampleName}_${processDay}_bqsr.log\\n";exit -1)
+		if [ $species == "human" ];then  # If other species, only dbsnp could be used as known-sites in the recalibration
+			$gatk BaseRecalibrator \
+				--input "$input" \
+				--reference $reference \
+				--known-sites $mill \
+				--known-sites $g1000 \
+				--known-sites $dbsnp \
+				--output  $report \
+				--tmp-dir $tmpDir > $PWD/log/${sampleName}_${processDay}_recal.log 2>&1 \
+					|| ( echo -e "ERROR occurred while recalibrate , please check $PWD/log/${sampleName}_${processDay}_recal.log\\n";exit -1)
+		else
+			$gatk BaseRecalibrator \
+				--input "$input" \
+				--reference $reference \
+				--known-sites $dbsnp \
+				--output  $report \
+				--tmp-dir $tmpDir > $PWD/log/${sampleName}_${processDay}_recal.log 2>&1 \
+					|| ( echo -e "ERROR occurred while recalibrate , please check $PWD/log/${sampleName}_${processDay}_recal.log\\n";exit -1)
+		fi
+
 	else
 		echo -e "\\t>>>>> $report <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
@@ -207,87 +187,177 @@ if [ $startStep = "recal" ];then
 			 --reference $reference \
 			 --input $input \
 			 --bqsr-recal-file $report  \
-			 --output $output > $PWD/log/${sampleName}_${processDay}_applybqsr.log 2>&1 \
+			 --output $output \
+			 --tmp-dir $tmpDir > $PWD/log/${sampleName}_${processDay}_applybqsr.log 2>&1 \
 			 || ( echo -e "ERROR occurred while applying BQSR , please check $PWD/log/${sampleName}_${processDay}_applybqsr.log\\n";exit -1)
 
-	# java -jar $gatk -T PrintReads \
-	# 	-R $reference \
-	# 	-I $input \
-	# 	-o  $output  \
-	# 	-BQSR $report \
-	# 	-nct $thread > $PWD/log/${sampleName}_${processDay}_printReads.log 2>&1 \
-	# 	|| ( echo -e "ERROR occurred while printing reads , please check $PWD/log/${sampleName}_${processDay}_printReads.log\\n";exit -1)
 	echo -e [`date`]\\tFinished recalibration bam file
 	delFile
 	else
 	echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
 
-	startStep="varCall"
+	startStep="gVcf"
 	input=$output
 fi
 allDone reCal
 
-# call variants
-if [ $startStep = "varCall" ];then
-	echo -e "[`date`]\\tStart calling variants with HaplotyperCaller..."
-	output=$sampleName.variants.raw.vcf
+### call germline variants
+if [ $startStep = "gVcf" ];then
+	echo -e "[`date`]\\tStart calling germline variants with HaplotyperCaller..."
+	output=$sampleName.g.vcf.gz
 
 	if [ ! -s $output ];then
-	java -jar $gatk -T HaplotypeCaller \
-		-R $reference \
-		-I $input \
-		-dontUseSoftClippedBases \
-		-D $dbsnp \
-		-stand_call_conf 20 \
-		-stand_emit_conf 20 \
-		-o $output \
-		-nct $thread >log/${sampleName}_${processDay}_HaplotyperCaller.log 2>&1 \
+	 $gatk  HaplotypeCaller \
+		--reference $reference \
+		--input $input \
+    -ERC GVCF \
+		--output $output \
+		--tmp-dir $tmpDir \
+		--native-pair-hmm-threads $thread >log/${sampleName}_${processDay}_HaplotyperCaller.log 2>&1 \
 		|| ( echo -e "ERROR occurred while call variants, please check $PWD/log/${sampleName}_${processDay}__HaplotyperCaller.log\\n";exit -1)
-	echo -e "[`date`]\\tVariants calling has been completed, start filtering the vcf files..."
+
+	   echo -e "[`date`]\\tVariants calling has been completed..."
 	else
-	echo -e "\\t>>>>> $sampleName.variants.raw.vcf <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	echo -e "\\t>>>>> $sampleName.g.vcf.gz <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
 	fi
 
-	input=$output
-	output=$sampleName.variants.filtered.vcf
-	echo -e "[`date`]\\tFinished calling variants, begin filtering variants with VariantFiltration..."
-
-	if [ ! -s $output ];then
-	java -jar $gatk -T VariantFiltration \
-		-R $reference \
-		-V $input \
-		-window 35 \
-		-cluster 3 \
-		-filterName FS \
-		-filter "FS > 30" \
-		-filterName QD \
-		-filter "QD < 2" \
-		-filterName DP \
-		-filter "DP < 8" \
-		-filterName MQ \
-		-filter "MQ < 60" \
-		-o  $output >log/${sampleName}_${processDay}_variantFilteration.log 2>&1 \
-		 || ( echo -e "ERROR occurred while filtering variants, please check $PWD/log/${sampleName}_${processDay}__variantFilteration.log\\n";exit -1)
-	echo -e "[`date`]\\tVariants filteration has been completed!"
-	else
-	echo -e "\\t>>>>> $sampleName.variants.filtered.vcf <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
-	fi
-
-	input=$output
-	startStep="anno"
+	echo -e "[`date`]\\tFinished germline variants calling, please combind gvcfs for jointly calling :\\tgatk CombineGVCFs  -R reference.fasta --variant sample1.g.vcf.gz --variant sample2.g.vcf.gz -O cohort.g.vcf.gz"
 fi
-allDone varCall
+exit 0
 
 
-# annotating variants
+#########################################################
+#################### Section II #########################
+
+###jointly calling
+if [ $startStep = "jCall" ];then
+		echo -e "[`date`]\\tStart jointly calling variants..."
+		output=`basename $input .vcf.gz`.jointlyCall.vcf.gz
+  if [ ! -s $output ];then
+	  $gatk GenotypeGVCFs \
+	     -R $reference \
+       -V "$input" \
+       -O "$output"  \
+			 --tmp-dir "$tmpDir"  >log/${sampleName}_${processDay}_jointlyCalling.log 2>&1 \
+	 		|| ( echo -e "ERROR occurred while call variants, please check $PWD/log/${sampleName}_${processDay}_jointlyCalling.log\\n";exit -1)
+
+     echo -e "[`date`]\\tJointly calling has been completed!"
+	else
+			echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+	startStep="varFilt"
+	input=$output
+fi
+allDone  jCall
+
+
+### filter variants
+if [ $startStep = "varFilt" ];then
+		echo -e "[`date`]\\tStart filtering variants..."
+    output=`basename $input .vcf.gz`.filtered.vcf.gz
+  if [ ! -s $output ];then
+		$gatk VariantFiltration \
+		 -R $reference \
+		 -V $input \
+		 -O $output \
+		 -window 35 \
+		 -cluster 3 \
+		 -filter "FS > 30" \
+     --filter-name "FS30" \
+ 		 -filter "QD < 2" \
+		 --filter-name "QD2" \
+ 		 -filter "DP < 8" \
+		 --filter-name "DP8" \
+ 		 -filter "MQ < 60" \
+		 --filter-name "MQ60" \
+		 --tmp-dir "$tmpDir"  >log/${sampleName}_${processDay}_variantFiltration.log 2>&1 \
+ 		 || ( echo -e "ERROR occurred while filtering variants, please check $PWD/log/${sampleName}_${processDay}_variantFiltration.log\\n";exit -1)
+
+     echo -e "[`date`]\\tVariants filteration has been completed!"
+	else
+			echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+	fi
+
+	input=$output
+	startStep="varRecal"
+fi
+allDone varFilt
+
+
+
+### recalibrate variants
+if [ $startStep = "varRecal" ];then
+		echo -e "[`date`]\\tStart recalibrating variants..."
+    output=`basename $input .vcf.gz`.reCal.vcf.gz
+
+  if [ ! -s $output ];then
+
+			     if [ ! -s "$sampleName.recal" ]||[ ! -s "$sampleName.tranches" ];then
+								 if [ $species == "human" ];then  # If other species, only dbsnp could be used as known-sites in the recalibration
+										    gatk VariantRecalibrator \
+													-R $reference \
+										      -V "$input" \
+										      --resource hapmap,known=false,training=true,truth=true,prior=15.0:$hapmap \
+										      --resource omni,known=false,training=true,truth=false,prior=12.0:$omni \
+										      --resource 1000G,known=false,training=true,truth=false,prior=10.0:$g1000hc \
+										      --resource dbsnp,known=true,training=false,truth=false,prior=7.0:$dbsnp \
+										      -an QD -an MQ -an MQRankSum -an ReadPosRankSum -an FS -an SOR \
+										      -mode SNP \
+													-O $sampleName.recal \
+										   		--tranches-file $sampleName.tranches \
+										   		--rscript-file  $sampleName.plots.R  \
+													--tmp-dir "$tmpDir"   >log/${sampleName}_${processDay}_variantRecalibrator.log 2>&1 \
+										  		 || ( echo -e "ERROR occurred while recalibrate variants, please check $PWD/log/${sampleName}_${processDay}_variantRecalibrator.log\\n";exit -1)
+
+								else
+									gatk VariantRecalibrator \
+										-R $reference \
+										-V "$input" \
+										--resource dbsnp,known=true,training=false,truth=false,prior=7.0:$dbsnp \
+										-an QD -an MQ -an MQRankSum -an ReadPosRankSum -an FS -an SOR \
+										-mode SNP \
+										-O $sampleName.recal \
+										--tranches-file $sampleName.tranches \
+										--rscript-file  $sampleName.plots.R  \
+										--tmp-dir "$tmpDir"   >log/${sampleName}_${processDay}_variantRecalibrator.log 2>&1 \
+										 || ( echo -e "ERROR occurred while recalibrate variants, please check $PWD/log/${sampleName}_${processDay}_variantRecalibrator.log\\n";exit -1)
+								fi
+							  echo -e "[`date`]\\tVariants recalibration has been completed!"
+					  else
+			 			echo -e "\\t>>>>> $sampleName.recal AND $sampleName.tranches <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+
+
+		 echo -e "[`date`]\\Start apply VQSR..."
+		 $gatk ApplyVQSR \
+				    -R $reference \
+				    -V "$input" \
+				    -O "$output" \
+				    --truth-sensitivity-filter-level 99.0 \
+				    --tranches-file $sampleName.tranches \
+				    --recal-file $sampleName.recal \
+				    -mode SNP \
+						--tmp-dir "$tmpDir"  >log/${sampleName}_${processDay}_applyVQSR.log 2>&1 \
+			  		 || ( echo -e "ERROR occurred while recalibrate variants, please check $PWD/log/${sampleName}_${processDay}_applyVQSR.log\\n";exit -1)
+		 echo -e "[`date`]\\Applying VQSR has been completed!"
+ else
+     echo -e "\\t>>>>> $output <<<<< already existed, please delete it manually if you want to rerun with new parameters , else just ingore"
+ fi
+
+ 	input=$output
+ 	startStep="anno"
+fi
+allDone varRecal
+
+
+### annotating variants
 if [ $startStep = "anno" ];then
 	echo -e "[`date`]\\tStart annotation with annovar..."
 
 	if [ ! -s annotation ];then mkdir annotation;fi
 
 	if [ ! -s annotation/$sampleName.hg19_multianno.txt ];then
-		$table_annovar $input  /database/annotation/annovar/humandb/ \
+		$table_annovar $input  $annovar_database \
 			-buildver hg19  \
 			-out annotation/$sampleName \
 			-protocol refGene,genomicSuperDups,1000g2014oct_all,1000g2014oct_afr,1000g2014oct_eas,1000g2014oct_eur,avsnp142,ljb26_all \

@@ -1,16 +1,15 @@
 #!/bin/bash -e
 
 if [ ! -w $wkdir ];then  error="$error \033[1;31m$wkdir: \033[0m is NOT writeable!\\n";fi
+if [ ! -w $tmpDir ];then  error="$error \033[1;31m$tmpDir: \033[0m is NOT writeable!\\n";fi
 #check the options and parameteres
 if [ ! -z "$wrongpara" ];then error="$error \033[1;31m$wrongpara: \033[0mNull/wrong parameters\\n";fi
 if [ "$error" ]&&[ "check" = "No" ];then echo -e $error; exit -1;fi
 
 # obtain the included steps
-if [ "$species" = "human" ];then
-	allSteps=(fastq arGrp markDup splitN recal varCall anno)
-else
-	allSteps=(fastq arGrp markDup splitN varCall anno)
-fi
+
+	allSteps=(fastq arGrp markDup splitN reCal gVcf jCall varFilt varRecal anno)
+
 checkStep
 if [ $checkStepOrder = 0 ];then  error="$error \033[1;31mEndStep must before startStep\033[0m\\n";fi
 
